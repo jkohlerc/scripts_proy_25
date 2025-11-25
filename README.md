@@ -2,20 +2,20 @@
 Repositorio con los scripts de análisis utilizados en un proyecto de investigación.
 La estructura está organizada por etapas de procesamiento.
 
-0_comun/
+0 comun:
   - Utilidades.R: funciones auxiliares de uso general.
   - Estadisticas.R: funciones para pruebas estadísticas con remuestreo.
 
-1_preparacion/
+1 Preparacion:
   - CrearDataset.R: construcción del conjunto de datos a partir de los archivos fuente.
 
-2_estadisticas/
+2 Estadisticas:
   - Analisis.R: análisis preliminar y preparación del conjunto de datos limpio.
 
-3_caracterizacion/
+3 Caracterizacion:
   - Clustering.R: procedimientos de agrupamiento y caracterización de grupos.
 
-4_prediccion/
+4 Prediccion:
   - Prediccion.R: script principal del proceso.
   - Configuracion.R: constantes y rangos de parámetros.
   - FuncionesGenerales.R: utilidades compartidas.
