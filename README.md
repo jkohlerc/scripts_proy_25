@@ -1,4 +1,4 @@
-# Tesis-doctoral
+# Repositorio scripts proyecto
 Repositorio con los scripts de análisis utilizados en un proyecto de investigación.
 La estructura está organizada por etapas de procesamiento.
 
