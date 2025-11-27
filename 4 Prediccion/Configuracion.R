@@ -35,16 +35,15 @@ NTREE <- list(
 
 # Límites de hiperparámetros.
 LIMITES_PARAMETROS <- list(
-  SVM_L = list(cost = c(2^-5, 2^15)),
-  SVM_R = list(cost = c(2^-5,  2^15), sigma = c(2^-15, 2^3)),
+  SVM_L = list(cost = c(2^-5, 2^15), epsilon = c(10^-4, 10^0)),
+  SVM_R = list(
+    cost = c(2^-5,  2^15), sigma = c(2^-15, 2^3), epsilon = c(10^-4, 10^0)),
   XGB = list(
     eta = c(0.01, 0.3), max_depth = c(2L,  6L), min_child_weight = c(1L,  10L),
     gamma = 0, subsample = 0.8, colsample_bytree = 0.8))
 
 # Irace.
 LOG_IRACE <- "iraceLog.rda"
-
-EXPERIMENTOS_IRACE <- list(SVM_L = 100, SVM_R = 200, XGB = 300)
 
 # Tipos de modelos.
 TIPOS_MODELO <- c("RL", "RF", "SVM_L", "SVM_R", "XGB")

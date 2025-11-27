@@ -254,20 +254,27 @@ ajustarParametros <- function(
   # Funciones de apoyo: optimización otros modelos.
   ##############################################################################
   
-  definirEspacio <- function(tipoModelo, limites = LIMITES_PARAMETROS) {
+  definirEspacio <- function(
+    tipoModelo, clasificacion, limites = LIMITES_PARAMETROS) {
     # Establece el espacio de búsqueda de los hiperparámetros según el tipo de
     # modelo.
     # Entrada:
     # - tipoModelo: string con el tipo de modelo.
+    # - clasificacion: TRUE para clasificación; FALSE para regresión.
     # - limites: lista con los límites del espacio de hiperparámetros por tipo
     #   de modelo.
     # Salida: lista con rangos de valores para hiperparámetros de un modelo.
     
     espacioBase <- limites[[tipoModelo]]
     lineas <- list()
-    logaritmicos <- list("cost", "sigma", "eta")
+    logaritmicos <- list("cost", "epsilon", "sigma", "eta")
     
     for(nombre in names(espacioBase)) {
+      if(nombre == "epsilon" &&
+         (!startsWith(tipoModelo, "SVM") || clasificacion)) {
+        next
+      }
+      
       rango <- espacioBase[[nombre]]
       if(length(rango) != 2) next
       tipo <- if(is.integer(rango)) "i" else "r"
@@ -283,15 +290,12 @@ ajustarParametros <- function(
     return(espacio)
   }
   
-  ejecutarIrace <- function(
-    datosModelo, tipoModelo, semilla = SEMILLA,
-    configuracion = EXPERIMENTOS_IRACE) {
+  ejecutarIrace <- function(datosModelo, tipoModelo, semilla = SEMILLA) {
     # Ejecuta irace.
     # Entrada:
     # - datosModelo: descriptor con los datos generales del modelo.
     # - tipoModelo: string con el tipo de modelo.
     # - semilla: semilla.
-    # - configuracion: lista con valores de configuración para irace.
     # Salida:
     # - Lista con los hiperparámetros ajustados.
     # - Archivo .csv con el reporte.
@@ -300,10 +304,10 @@ ajustarParametros <- function(
     instanciaDummy <- "dummy.txt"
     writeLines("1", instanciaDummy)
     
-    espacio <- definirEspacio(tipoModelo)
+    espacio <- definirEspacio(tipoModelo, datosModelo$clasificacion)
     
     escenario <- list(
-      maxExperiments = configuracion[[tipoModelo]], logFile = LOG_IRACE,
+      maxExperiments = 100 * length(espacio$.params), logFile = LOG_IRACE,
       targetRunner = funcionObjetivo(datosModelo, tipoModelo),
       parameters = espacio, trainInstancesFile = instanciaDummy, seed = semilla)
     

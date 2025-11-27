@@ -68,7 +68,7 @@ for(curso in CURSOS) {
   # Comparar modelos.
   datosModelo <- list(
     clasificacion = datosModelo$clasificacion,
-    respuesta = datosModelo$respuesta, parsimonia = datosModelo$parsimonia)
+    respuesta = datosModelo$respuesta)
 
   cumple <- compararModelos(base, final, datosModelo)
 
@@ -108,7 +108,7 @@ for(curso in CURSOS) {
   # Comparar modelos.
   datosModelo <- list(
     clasificacion = datosModelo$clasificacion,
-    respuesta = datosModelo$respuesta, parsimonia = datosModelo$parsimonia)
+    respuesta = datosModelo$respuesta)
 
   compararModelos(base, final, datosModelo)
 }

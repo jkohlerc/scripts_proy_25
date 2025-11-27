@@ -488,7 +488,8 @@ verificarNormalidad <- function(df) {
   resultado <- data.frame()
   
   for(nombre in colnames(df)) {
-    prueba <- shapiroWilk(df[[nombre]])
+    prueba <- data.frame(Variable = nombre)
+    prueba <- cbind(prueba, shapiroWilk(df[[nombre]]))
     resultado <- rbind(resultado, prueba)
   }
   

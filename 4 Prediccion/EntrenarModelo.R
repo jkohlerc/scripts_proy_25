@@ -269,9 +269,18 @@ entrenarModelo <- function(
       # Salida: flujo de trabajo.
       
       # Configurar el motor de entrenamiento.
-      especificacionSVM <- svm_linear(
-        cost = parametros$cost) %>% set_mode(tarea) %>%
-        set_engine("kernlab", prob.model = TRUE, verbose = FALSE)
+      especificacionSVM <- NULL
+      
+      if(tarea == "classification") {
+        especificacionSVM <- svm_linear(
+          cost = parametros$cost) %>% set_mode(tarea) %>%
+          set_engine("kernlab", prob.model = TRUE, verbose = FALSE)
+      } else {
+        especificacionSVM <- svm_linear(
+          cost = parametros$cost, margin = parametros$epsilon) %>%
+          set_mode(tarea) %>%
+          set_engine("kernlab", verbose = FALSE)
+      }
       
       # Definir receta base y el flujo de trabajo.
       receta <- receta %>%
@@ -293,9 +302,18 @@ entrenarModelo <- function(
       # Salida: flujo de trabajo.
       
       # Configurar el motor de entrenamiento.
-      especificacionSVM <- svm_rbf(
-        cost = parametros$cost, rbf_sigma = parametros$sigma) %>%
-        set_mode(tarea) %>% set_engine("kernlab", verbose = FALSE)
+      especificacionSVM <- NULL
+      
+      if(tarea == "classification") {
+        especificacionSVM <- svm_rbf(
+          cost = parametros$cost, rbf_sigma = parametros$sigma) %>%
+          set_mode(tarea) %>% set_engine("kernlab", verbose = FALSE)
+      } else {
+        especificacionSVM <- svm_rbf(
+          cost = parametros$cost, rbf_sigma = parametros$sigma,
+          margin = parametros$epsilon) %>% set_mode(tarea) %>%
+          set_engine("kernlab", verbose = FALSE)
+      }
       
       # Definir receta base y el flujo de trabajo.
       receta <- receta %>%

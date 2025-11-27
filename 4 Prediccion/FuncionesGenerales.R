@@ -358,6 +358,11 @@ reportarParametros <- function(parametros) {
       valor <- formatearFlotante(exponente, 3)
       actual <- sprintf("%s = 2^%s", nombre,valor)
       textos <- c(textos, actual)
+    } else if(nombre == "epsilon") {
+      exponente <- log10(parametros[[nombre]])
+      valor <- formatearFlotante(exponente, 3)
+      actual <- sprintf("%s = 10^%s", nombre,valor)
+      textos <- c(textos, actual)
     } else {
       actual <- paste(nombre, formatearFlotante(parametros[[nombre]], 3))
       textos <- c(textos, actual)
