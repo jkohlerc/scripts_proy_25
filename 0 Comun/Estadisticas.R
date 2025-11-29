@@ -718,6 +718,12 @@ tTestPar <- function(
   # Función principal.
   ################################################################################
   
+  # Eliminar pares incompletos.
+  dfTest <- data.frame(g1 = grupo1, g2 = grupo2)
+  dfTest <- na.omit(dfTest)
+  grupo1 <- dfTest$g1
+  grupo2 <- dfTest$g2
+  
   # Obtener valor p (H0: delta = 0).
   p <- calcularP(grupo1, grupo2, delta = 0, R = R, semilla = semilla)
   
@@ -742,7 +748,6 @@ tTestPar <- function(
   
   return(resultado)
 }
-
 
 
 ################################################################################
