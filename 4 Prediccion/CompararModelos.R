@@ -285,7 +285,7 @@ compararModelos <- function(base, final, datosModelo) {
                   linetype = "dashed", color = "gray40") +
       scale_color_manual(values = c("Base" = "#F8766D", "Final" = "#00BFC4")) +
       labs(
-        title = titulo, x = "Valor observado", y = "Valor predicho",
+        title = titulo, x = "Valor observado", y = "Valor estimado",
         color = "Modelo") + theme_pubr() +
       scale_x_continuous(labels = formatoEjes) +
       scale_y_continuous(labels = formatoEjes)

@@ -17,24 +17,25 @@ seleccionarCaracteristicas <- function(
   # Funciones de apoyo.
   ##############################################################################
   
-  descartarCorrelacionados <- function(df, clasificacion, maximoVif = MAX_VIF) {
+  descartarCorrelacionados <- function(df, datosModelo, maximoVif = MAX_VIF) {
     # Elimina variables con un alto factor de inflación de varianza para modelos
     # de regresión lineal y logística.
     # Entrada:
     # - df: dataframe con el conjunto de predictores seleccionado por Boruta.
-    # - clasificacion: TRUE para clasificación; FALSE para regresión.
+    # - datosModelo: descriptor con los datos generales del modelo.
     # - maximoVif: máxima inflación de varianza permitida.
     # Salida: vector con los nombres de los predictores seleccionados.
     
     predictores <- setdiff(names(df), "respuesta")
     continuar <- TRUE
+    primero <- TRUE
     
     while(continuar && length(predictores) > 1) {
       formula <- as.formula(
         paste("respuesta ~ ", paste(predictores, collapse = "+")))
       
       modelo <- tryCatch({
-        if(clasificacion) {
+        if(datosModelo$clasificacion) {
           glm(formula, data = df, family = binomial(link = "logit"))
         } else {
           lm(formula, data = df)
@@ -43,7 +44,14 @@ seleccionarCaracteristicas <- function(
       
       if(is.null(modelo)) break
       vifs <- tryCatch(car::vif(modelo), error = function(e) NULL)
-      if(is.null(vifs) || all(is.na(vifs))) break
+      
+      if(is.null(vifs) || all(is.na(vifs))) {
+        break
+      } else if(primero) {
+        primero <- FALSE
+        dfVifs <- data.frame(Variable = names(vifs), VIF = round(vifs, 3))
+        guardarReporte(datosModelo, dfVifs, "VIF seleccion", usarNombre = TRUE)
+      }
       
       if(max(vifs, na.rm = TRUE) > maximoVif) {
         predictores <- setdiff(predictores, names(vifs)[which.max(vifs)])
@@ -186,9 +194,7 @@ seleccionarCaracteristicas <- function(
   filtrado <- datosModelo$df %>% select(
     all_of(c("respuesta", resultadoBoruta$predictores)))
   
-  predictores <- descartarCorrelacionados(
-    filtrado, datosModelo$clasificacion, maximoVif)
-  
+  predictores <- descartarCorrelacionados(filtrado, datosModelo, maximoVif)
   filtrado <- filtrado %>% select(all_of(c("respuesta", predictores)))
   graficarImportanciaBoruta(datosModelo, resultadoBoruta, predictores)
   datosModelo$df <- filtrado  

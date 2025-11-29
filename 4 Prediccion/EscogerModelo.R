@@ -278,7 +278,7 @@ escogerModelo <- function(
       geom_abline(
         slope = 1, intercept = 0, linetype = "dashed", color = "red") +
       labs(
-        title = "Gráfico de calibración", x = "Probabilidad predicha",
+        title = "Gráfico de calibración", x = "Probabilidad estimada",
         y = "Frecuencia observada") +
       theme_pubr() + scale_x_continuous(labels = formatoEjes) +
       scale_y_continuous(labels = formatoEjes)
@@ -338,12 +338,16 @@ escogerModelo <- function(
     # Definir formato para marcas de los ejes.
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 3))
     
+    # Definir subtítulo con el valor de la métrica.
+    subtitulo <- paste0("AUC-PR = ", modelo$resumen$media$AUC_PR)
+
     # Generar el gráfico.
     g <- ggplot(dfCurva, aes(x = Recall, y = Precision)) +
       geom_line(color = "navy", size = 1.2) +
       geom_hline(
         yintercept = mean(observado), linetype = "dashed", color = "red") +
-      labs(title = "Curva PR", x = "Recall", y = "Precisión") +
+      labs(
+        title = "Curva PR", subtitle = subtitulo, x = "Recall", y = "Precisión") +
       theme_pubr() + scale_x_continuous(labels = formatoEjes) +
       scale_y_continuous(labels = formatoEjes)
     
@@ -367,12 +371,17 @@ escogerModelo <- function(
     # Definir formato para marcas de los ejes.
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 3))
     
+    # Definir subtítulo con el valor de la métrica.
+    subtitulo <- paste0("AUC-ROC = ", modelo$resumen$media$AUC_ROC)
+    
     # Generar el gráfico.
     g <- ggplot(df, aes(x = falsosPositivos, y = verdaderosPositivos)) +
       geom_line(color = "navy", size = 1.2) +
       geom_abline(
         slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-      labs(title = "Curva ROC", x = "1 - especificidad", y = "Sensibilidad") +
+      labs(
+        title = "Curva ROC", subtitle = subtitulo, x = "1 - especificidad",
+        y = "Sensibilidad") +
       theme_pubr() + scale_x_continuous(labels = formatoEjes) +
       scale_y_continuous(labels = formatoEjes)
     
@@ -426,7 +435,7 @@ escogerModelo <- function(
       geom_abline(
         slope = 1, intercept = 0, linetype = "dashed", color = "red") +
       labs(
-        title = "Dispersión de predicciones", x = "Observado", y = "Predicho") +
+        title = "Dispersión de predicciones", x = "Observado", y = "Estimado") +
       theme_pubr() + scale_x_continuous(labels = formatoEjes) +
       scale_y_continuous(labels = formatoEjes)
     
@@ -486,7 +495,7 @@ escogerModelo <- function(
     g <- ggplot(df, aes(x = Predicho, y = residual)) +
       geom_point(color = "navy") +
       geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-      labs(title = "Dispersión de residuos", x = "Predicho", y = "Residuo") +
+      labs(title = "Dispersión de residuos", x = "Estimado", y = "Residuo") +
       theme_pubr() + scale_x_continuous(labels = formatoEjeX) +
       scale_y_continuous(labels = formatoEjeY)
     
