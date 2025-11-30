@@ -276,7 +276,7 @@ compararModelos <- function(base, final, datosModelo) {
       mutate(Modelo = dplyr::recode(
         Modelo, "prediccionesBase" = "Base", "prediccionesFinal" = "Final"))
     
-    titulo <- "Predicciones"
+    titulo <- "Estimaciones"
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 1))
     
     g <- ggplot(df, aes(x = observado, y = Predicho, color = Modelo)) +
