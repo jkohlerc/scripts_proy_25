@@ -254,19 +254,18 @@ escogerModelo <- function(
     # - modelo: objeto con el modelo.
     # Salida: objeto con el gráfico.
     
-    observado <- ifelse(modelo$predicciones$Observado == "REPRUEBA", 1, 0)
+    # Convertir valores observados a formato 0/1 y calcular la media de las
+    # probabilidades obtenidas para cada observación.
+    df <- modelo$predicciones %>%
+      mutate(obs = ifelse(Observado == "REPRUEBA", 1, 0)) %>%
+      group_by(Id) %>%  summarise(obs = first(obs), prob = mean(Prob_REPRUEBA))
     
-    # Crear dataframe agrupado por bins.
-    df <- data.frame(
-      probabilidad = modelo$predicciones$Prob_REPRUEBA, obs = observado) %>%
-      mutate(bin = cut(
-        probabilidad, breaks = seq(0, 1, length.out = 11),
-        include.lowest = TRUE)) %>%
-      group_by(bin) %>%
-      summarise(
-        mediaProbabilidad = mean(probabilidad),
-        mediaObservado = mean(observado)
-      )
+    # Agrupar dataframe por bins.
+    df <- df %>% mutate(
+      bin = cut(
+        prob, breaks = seq(0, 1, length.out = 11), include.lowest = TRUE)) %>%
+      group_by(bin) %>% summarise(
+        mediaProbabilidad = mean(prob), mediaObservado = mean(obs))
     
     # Definir formato para marcas de los ejes.
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 3))
