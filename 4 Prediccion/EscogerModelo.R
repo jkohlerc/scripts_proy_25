@@ -434,7 +434,7 @@ escogerModelo <- function(
       geom_abline(
         slope = 1, intercept = 0, linetype = "dashed", color = "red") +
       labs(
-        title = "Dispersión de predicciones", x = "Observado", y = "Estimado") +
+        title = "Dispersión de estimaciones", x = "Observado", y = "Estimado") +
       theme_pubr() + scale_x_continuous(labels = formatoEjes) +
       scale_y_continuous(labels = formatoEjes)
     
