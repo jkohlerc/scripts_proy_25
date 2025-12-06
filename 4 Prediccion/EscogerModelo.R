@@ -130,6 +130,15 @@ escogerModelo <- function(
     g <- wrap_plots(graficos, ncol = columnas) +
       plot_annotation(title = titulo, subtitle = subtitulo)
     
+    if (length(graficos) > 1) {
+      g <- g + plot_annotation(
+          title = titulo, subtitle = subtitulo, tag_levels = "a",
+          tag_prefix = "(", tag_suffix = ")") &
+        theme(plot.tag.position = "bottom")
+    } else {
+      g <- g + plot_annotation(title = titulo, subtitle = subtitulo)
+    }
+    
     # Guardar el gráfico combinado.
     archivo <- paste0("Residuos RL ", tolower(datosModelo$nombre))
     
@@ -310,7 +319,10 @@ escogerModelo <- function(
     
     # Generar y guardar el gráfico combinado.
     g <- (roc | pr) / (calibracion | importancia) +
-      plot_annotation(title = titulo, subtitle = subtitulo)
+      plot_annotation(
+        title = titulo, subtitle = subtitulo, tag_levels = "a",
+        tag_prefix = "(", tag_suffix = ")") &
+      theme(plot.tag.position = "bottom")
     
     archivo <- paste0("Evaluacion modelo ", datosModelo$nombre)
     
@@ -466,7 +478,10 @@ escogerModelo <- function(
     
     # Generar y guardar el gráfico combinado.
     g <- (predicciones | residuos) / (densidad | importancia) +
-      plot_annotation(title = titulo, subtitle = subtitulo)
+      plot_annotation(
+        title = titulo, subtitle = subtitulo, tag_levels = "a",
+        tag_prefix = "(", tag_suffix = ")") &
+      theme(plot.tag.position = "bottom")
     
     archivo <- paste0("Evaluacion modelo ", datosModelo$nombre)
     

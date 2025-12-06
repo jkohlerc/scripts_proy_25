@@ -91,7 +91,10 @@ compararModelos <- function(base, final, datosModelo) {
     
     # Generar y guardar el gráfico combinado.
     g <- (roc | pr) +
-      plot_annotation(title = titulo, subtitle = datosModelo$respuesta)
+      plot_annotation(
+        title = titulo, subtitle = datosModelo$respuesta,
+        tag_levels = "a", tag_prefix = "(", tag_suffix = ")" ) &
+      theme(plot.tag.position = "bottom")
     
     guardarGrafico(
       datosModelo, g, "Comparacion modelos", usarNombre = FALSE, width = 12,
@@ -311,8 +314,11 @@ compararModelos <- function(base, final, datosModelo) {
     
     # Generar y guardar el gráfico combinado.
     g <- (predicciones | residuos) +
-      plot_annotation(title = titulo, subtitle = datosModelo$respuesta)
-
+      plot_annotation(
+        title = titulo, subtitle = datosModelo$respuesta,
+        tag_levels = "a", tag_prefix = "(", tag_suffix = ")" ) &
+      theme(plot.tag.position = "bottom")
+    
     guardarGrafico(
       datosModelo, g, "Comparacion modelos", usarNombre = FALSE, width = 12,
       height = 5)

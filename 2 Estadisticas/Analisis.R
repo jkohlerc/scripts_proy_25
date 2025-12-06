@@ -150,7 +150,7 @@ combinarGraficos <- function(
   # - subtitulo: subtítulo (opcional) del gráfico.
   # Salida: archivo .pdf con el gráfico generado.
   
-  panel <- ggarrange(gCinfA, gCinfO, gPDT, gNotas, ncol = 2, nrow = 2)
+  panel <- (gCinfA | gCinfO) / (gPDT | gNotas)
   
   if(!is.null(subtitulo)) {
     texto <- paste0(titulo, "\n", subtitulo)
@@ -158,13 +158,19 @@ combinarGraficos <- function(
     texto <- titulo
   }
   
-  anotacion <- text_grob(texto, face = "bold", size = 14, vjust = 0.5,
-                         hjust = 0.5)
+  panel <- panel +
+    plot_annotation(
+      title = texto,
+      theme = theme(plot.title = element_text(face = "bold", size = 14)),
+      tag_levels = "a", tag_prefix = "(", tag_suffix = ")") &
+    theme(plot.tag.position = "bottom")
   
-  g <- annotate_figure(panel, top = anotacion)
   archivo <- paste0(RUTA_RESULTADOS, "/", nombreArchivo)
   crearRuta(archivo)
-  ggexport(g, filename = archivo, verbose = FALSE, width = 10, height = 8)
+  
+  ggsave(
+    filename = archivo, plot = panel, width = 10, height = 8,
+    device = cairo_pdf)
 }
 
 formatearEjeY <- function(titulo, decimales = 1) {

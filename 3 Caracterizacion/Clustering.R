@@ -8,7 +8,7 @@ source("Scripts/0 Comun/Estadisticas.R")
 
 # Cargar paquetes.
 importarPaquetes(c(
-  "clValid", "combinat", "doParallel", "doRNG", "foreach", "ggpubr",
+  "caret", "clValid", "combinat", "doParallel", "doRNG", "foreach", "ggpubr",
   "patchwork", "pROC","PRROC", "reshape2", "rstatix", "tidyverse"))
 
 
@@ -248,8 +248,9 @@ combinarGraficos <- function(graficos, titulo, nombreArchivo) {
   
   g <- g + patchwork::plot_annotation(
     title = titulo,
-    theme = ggplot2::theme(plot.title = ggplot2::element_text(
-      size = 14, face = "bold")))
+    theme = theme(plot.title = ggplot2::element_text(size = 14, face = "bold")),
+    tag_levels = "a", tag_prefix = "(", tag_suffix = ")") &
+    theme(plot.tag.position = "bottom")
   
   # Guardar el gráfico resultante.
   columnas <- 2
@@ -1391,7 +1392,7 @@ for(subconjunto in SUBCONJUNTOS) {
   # Agregar grupos al dataframe.
   nombre <- paste0("clusters_", subconjunto)
   datos[[nombre]] <- factor(grupos$cluster)
-  
+
   # Obtener perfiles de los grupos.
   reportarClusters(subconjunto, datos, grupos)
   caracterizarCompetencias(subconjunto, datos)

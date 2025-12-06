@@ -153,15 +153,7 @@ crearRutaSalida <- function(
   # - rutaBase: ruta de la carpeta principal de resultados.
   # Salida: string con la ruta para guardar un archivo.
   
-  ruta <- rutaBase
-  
-  if(!is.null(datosModelo$parsimonia)) {
-    experimento <- if(datosModelo$parsimonia) "Parsimonia" else "Absoluto"
-    ruta <- paste(rutaBase, experimento, sep = "/")
-  }
-  
-  ruta <- paste(ruta, datosModelo$respuesta, sep = "/")
-  
+  ruta <- paste(rutaBase, datosModelo$respuesta, sep = "/")
   if(usarNombre) ruta <- paste(ruta, datosModelo$nombre, sep = "/")
   if(!dir.exists(ruta)) dir.create(ruta, recursive = TRUE, showWarnings = FALSE)
   return(ruta)
@@ -306,7 +298,7 @@ guardarReporte <- function(datosModelo, reporte, archivo, usarNombre) {
 }
 
 inicializarDescriptor <- function(
-    listaDatos, curso, clasificacion, dfBase = NULL, parsimonia = NULL) {
+    listaDatos, curso, clasificacion, dfBase = NULL) {
   # Crea el descriptor para ajustar un modelo dados un problema (clasificación o
   # regresión), curso y subconjunto de predictores.
   # Entrada:
@@ -316,9 +308,6 @@ inicializarDescriptor <- function(
   # - clasificacion: TRUE para clasificación; FALSE para regresión.
   # - dfBase: dataframe utilizado para el ajuste del modelo base (solo para el
   #   modelo final).
-  # - parsimonia: TRUE para usar parsimonia en el proceso de selección de
-  #   características; FALSE si se quiere escoger el óptimo absoluto. NULL si
-  #   solo se ejecutará un único experimento usando parsimonia.
   # Salida: lista con los elementos para el modelo.
   
   prefijo <- if(clasificacion) "SIT_" else "NOTA_"
@@ -331,10 +320,6 @@ inicializarDescriptor <- function(
     plieguesOptimizacion = crearFolds(df, optimizacion = TRUE),
     plieguesFinal = crearFolds(df, optimizacion = FALSE))
   
-  if(!is.null(parsimonia)) {
-    datosModelo$parsimonia <- parsimonia
-  }
-  
   return(datosModelo)
 }
 
@@ -345,8 +330,14 @@ reportarParametros <- function(parametros) {
   # Salida: string con los parámetros.
   
   nombres <- names(parametros)
+  
+  if("nrounds" %in% nombres) {
+    nombres <- c("nrounds", setdiff(nombres, "nrounds"))
+    parametros[nombres]
+  }
+  
   textos <- c()
-  enteros <- c("ntree", "mtry", "max_depth", "min_child_weight")
+  enteros <- c("ntree", "mtry", "nrounds", "max_depth", "min_child_weight")
   logaritmos <- c("cost", "sigma")
   
   for(nombre in nombres) {
@@ -364,7 +355,9 @@ reportarParametros <- function(parametros) {
       actual <- sprintf("%s = 10^%s", nombre,valor)
       textos <- c(textos, actual)
     } else {
-      actual <- paste(nombre, formatearFlotante(parametros[[nombre]], 3))
+      actual <- paste(
+        nombre, formatearFlotante(parametros[[nombre]], 3), sep = "=")
+      
       textos <- c(textos, actual)
     }
   }
