@@ -350,7 +350,8 @@ escogerModelo <- function(
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 3))
     
     # Definir subtítulo con el valor de la métrica.
-    subtitulo <- paste0("AUC-PR = ", modelo$resumen$media$AUC_PR)
+    subtitulo <- paste0(
+      "AUC-PR = ", formatearFlotante(curva$auc.davis.goadrich, 3))
 
     # Generar el gráfico.
     g <- ggplot(dfCurva, aes(x = Recall, y = Precision)) +
@@ -383,7 +384,7 @@ escogerModelo <- function(
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 3))
     
     # Definir subtítulo con el valor de la métrica.
-    subtitulo <- paste0("AUC-ROC = ", modelo$resumen$media$AUC_ROC)
+    subtitulo <- paste0("AUC-ROC = ", formatearFlotante(curva$auc, 3))
     
     # Generar el gráfico.
     g <- ggplot(df, aes(x = falsosPositivos, y = verdaderosPositivos)) +
@@ -531,21 +532,34 @@ escogerModelo <- function(
     # Salida:
     # - Dataframe modificado con el reporte.
     
-    # Escoger el mejor modelo.
     mejor <- reporte
     
     if(clasificacion) {
-      mejorValor <- max(mejor$MCC, na.rm = TRUE)
-      mejor <- mejor %>% filter(MCC == mejorValor)
-      mejorValor <- max(mejor$AUC_PR, na.rm = TRUE)
-      mejor <- mejor %>% filter(AUC_PR == mejorValor)
+      # Selección por AUC_ROC.
       mejorValor <- max(mejor$AUC_ROC, na.rm = TRUE)
       mejor <- mejor %>% filter(AUC_ROC == mejorValor)
+      
+      # Desempate por AUC_PR.
+      if(nrow(mejor) > 1) {
+        mejorValor <- max(mejor$AUC_PR, na.rm = TRUE)
+        mejor <- mejor %>% filter(AUC_PR == mejorValor)
+      }
+      
+      # Desempate por Brier.
+      if(nrow(mejor) > 1) {
+        mejorValor <- min(mejor$Brier, na.rm = TRUE)
+        mejor <- mejor %>% filter(Brier == mejorValor)
+      }
     } else {
+      # Selección por RMSE.
       mejorValor <- min(mejor$RMSE, na.rm = TRUE)
       mejor <- mejor %>% filter(RMSE == mejorValor)
-      mejorValor <- max(mejor$R2, na.rm = TRUE)
-      mejor <- mejor %>% filter(R2 == mejorValor)
+      
+      # Desempate por R2.
+      if(nrow(mejor) > 1) {
+        mejorValor <- max(mejor$R2, na.rm = TRUE)
+        mejor <- mejor %>% filter(R2 == mejorValor)
+      }
     }
     
     mejor <- mejor[1, ]
@@ -608,12 +622,7 @@ escogerModelo <- function(
         Respuesta = datosModelo$respuesta, Modelo = modelo$tipo,
         Predictores = modelo$predictores)
       
-      actual <- cbind(actual, modelo$resumen$media)
-      
-      if(datosModelo$clasificacion) {
-        actual <- cbind(actual, modelo$matriz)
-      }
-      
+      actual <- cbind(actual, modelo$resumen)
       params <- reportarParametros(modelo$parametros)
       actual <- cbind(actual, parametros = params)
       reporte <- if(is.null(reporte)) actual else rbind(reporte, actual)
@@ -650,18 +659,17 @@ escogerModelo <- function(
       cat(paste0("\t", tipo, "\n"))
       
       modelos[[tipo]] <- entrenarModelo(
-        datosModelo, tipo, completo = TRUE, optimizacion = FALSE,
-        semilla = semilla)
+        datosModelo, tipo, optimizacion = FALSE, semilla = semilla)
     }
   }
   
   # Guardar la lista de modelos.
   guardarModelos(datosModelo, modelos, "Modelos")
-  
+
   # Reportar modelos y escoger el mejor.
   reporte <- reportarModelos(modelos, datosModelo)
   modelo <- extraerMejor(modelos, reporte, datosModelo)
-  
+
   # Devolver el modelo seleccionado.
   return(modelo)
 }

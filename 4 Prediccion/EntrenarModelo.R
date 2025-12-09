@@ -1,6 +1,6 @@
 entrenarModelo <- function(
-    datosModelo, tipoModelo, parametros = NULL, completo, optimizacion,
-    semilla = SEMILLA, nombresMetricas = NOMBRES_METRICAS) {
+    datosModelo, tipoModelo, parametros = NULL, optimizacion, semilla = SEMILLA,
+    nombresMetricas = NOMBRES_METRICAS) {
   # Ajusta un modelo con un conjunto dado de hiperparámetros.
   # Entrada:
   # - datosModelo: descriptor con los datos generales del modelo.
@@ -8,14 +8,14 @@ entrenarModelo <- function(
   # - parametros: lista con los valores de los hiperparámetros (si es NULL, se
   #   optimizan o se usan parámetros por defecto).
   #   características).
-  # - completo: TRUE para entregar el modelo completo; FALSE para entregar solo
-  #   la métrica principal, .
-  # - optimizacion: TRUE para usar validación cruzada simple; FALSE, para usar
-  #   validación cruzada con repeticiones.
+  # - optimizacion: TRUE indica que se usa validación cruzada simple y solo se
+  #   devuelve la métrica para optimización de hiperparámetros; FALSE indica que
+  #   se usa validación cruzada con repeticiones y se devuelve el modelo
+  #   completo.
   # - semilla: semilla.
   # - nombresMetricas: lista con los nombres de las métricas.
-  # Salida: según opción completo:
-  # - TRUE: el objeto resultante incluye un modelo completo, con:
+  # Salida: según opción optimizacion:
+  # - FALSE: el objeto resultante incluye un modelo completo, con:
   #   - clasificador: TRUE si es clasificador, FALSE si es regresor.
   #   - respuesta: nombre de la variable de respuesta.
   #   - nombre: string con el nombre del modelo (Base o Final).
@@ -30,15 +30,12 @@ entrenarModelo <- function(
   #     observaciones no empleadas durante el entrenamiento.
   #   - metricas: reporte de las métricas por pliegue.
   #   - resumen: reporte con el resumen (media, error estándar) de las métricas.
-  #   - cv: objeto con el modelo de validación cruzada.
   #   - final: objeto con el modelo final.
-  #   - matriz: matriz de confusión para las predicciones realizadas
-  #     (solo clasificación).
-  # - FALSE: solo se devuelve el valor resumido de la métrica de interés.
-  
-  ################################################################################
+  # - TRUE: solo se devuelve el valor resumido de la métrica de interés.
+
+  ##############################################################################
   # Funciones de apoyo.
-  ################################################################################
+  ##############################################################################
   
   calcularImportancia <- function(modeloFinal, tipoModelo, df = NULL) {
     # Determina la importancia de las variables para un modelo ajustado de
@@ -375,30 +372,23 @@ entrenarModelo <- function(
     return(flujo)
   }
   
-  crearMetrica <- function(clasificacion, completo) {
+  crearMetrica <- function(clasificacion, optimizacion) {
     # Define el conjunto de métricas para un modelo.
     # Entrada:
     # - clasificacion: TRUE para clasificación; FALSE para regresión.
-    # - completo: TRUE para todas las métricas, FALSE para métrica principal.
+    # - optimizacion: TRUE para métrica principal, FALSE para todas las
+    #   métricas.
     # evaluación (irace) o todas las métricas para reporte.
     # Salida: objeto con las métricas.
     
     if(clasificacion) {
-      if(!completo) {
-        metrica <- switch(
-          METRICA_CLAS,
-          "AUC_PR" = yardstick::metric_set(yardstick::pr_auc),
-          "AUC_ROC" = yardstick::metric_set(yardstick::roc_auc),
-          yardstick::metric_set(yardstick::mcc))
-        
-        return(metrica)
-      }
+      if(optimizacion) return(yardstick::metric_set(yardstick::roc_auc))
       
       return(yardstick::metric_set(
-        yardstick::mcc, yardstick::sens, yardstick::spec, yardstick::roc_auc,
-        yardstick::pr_auc))
+        yardstick::roc_auc, yardstick::pr_auc, yardstick::brier_class,
+        yardstick::mcc, yardstick::sens, yardstick::spec))
     } else {
-      if(!completo) return(yardstick::metric_set(yardstick::rmse))
+      if(optimizacion) return(yardstick::metric_set(yardstick::rmse))
       return(yardstick::metric_set(yardstick::rmse, yardstick::rsq))
     }
   }
@@ -429,26 +419,6 @@ entrenarModelo <- function(
         .cols = setdiff(names(.), nombresPliegues)) %>%
       as.data.frame()
     return(metricas)
-  }
-  
-  extraerMatrizConfusion <- function(predicciones) {
-    # Obtiene la matriz de confusión a partir de las predicciones realizadas
-    # (solo clasificación).
-    # Entrada:
-    # - modeloCV: objeto de validación cruzada de tidymodels.
-    # - balance: lista con los nombres de las clases mayoritaria y minoritaria,
-    #   y con la tasa de desbalance.
-    # Salida: dataframe con la matriz de confusión.
-    
-    if(!modelo$clasificador) return(NULL)
-    matriz <- predicciones %>% conf_mat(truth = Observado, estimate = Predicho)
-    matriz <- matriz$table
-    
-    confusion <- data.frame(
-      VP = matriz["REPRUEBA", "REPRUEBA"], FP = matriz["REPRUEBA", "APRUEBA"],
-      FN = matriz["APRUEBA", "REPRUEBA"], VN = matriz["APRUEBA", "APRUEBA"])
-    
-    return(confusion)
   }
   
   extraerPredicciones <- function(modeloCV) {
@@ -489,33 +459,89 @@ entrenarModelo <- function(
     return(predicciones)
   }
   
-  extraerResumenMetricas <- function(modeloCV, nombres = NOMBRES_METRICAS) {
+  extraerResumenMetricas <- function(
+    datosModelo, modeloCV, modeloFinal = NULL, nombres = NOMBRES_METRICAS) {
     # Extrae las métricas de evaluación resumidas.
     # Entrada:
+    # - datosModelo: descriptor con los datos generales del modelo.
     # - modeloCV: modelo ajustado con validación cruzada.
+    # - modeloFinal: modelo ajustado de tidymodels.
     # - nombres: lista con los nombres de las métricas con formato para reporte.
     # Salida: dataframe con las métricas por pliegue.
-    
-    # Extraer las métricas por pliegue.
-    metricas <- collect_metrics(modeloCV, summarize = TRUE) %>%
-      mutate(across(.cols = where(is.numeric), .fns = ~ round(.x, 3)))
-    
-    # Obtener la media.
-    media <- metricas %>% 
-      select(.metric, mean) %>%
-      pivot_wider(names_from = .metric, values_from = mean) %>%
-      rename_with(~ names(nombres)[match(.x, nombres)], .cols = everything()) %>%
+
+    # Extraer métricas originales.
+    metricas <- collect_metrics(modeloCV, summarize = TRUE, type = "wide") %>%
+      select(-".config") %>% mutate(
+        across(.cols = where(is.numeric), .fns = ~ round(.x, 3))) %>%
       as.data.frame()
     
-    # Obtener el error estándar.
-    se <- metricas %>% 
-      select(.metric, std_err) %>%
-      pivot_wider(names_from = .metric, values_from = std_err) %>%
-      rename_with(~ names(nombres)[match(.x, nombres)], .cols = everything()) %>%
-      as.data.frame()
+    # Ordenar las métricas.
+    columnas <- intersect(colnames(metricas), nombres)
     
-    # Empaquetar resultado.
-    metricas <- list(media = media, se = se)
+    if(length(columnas) > 0) {
+      metricas <- metricas %>% rename_with(
+          ~ names(nombres)[match(.x, nombres)], .cols = columnas)
+    }
+    
+    if(datosModelo$clasificacion) {
+      metricas <- metricas %>% select(any_of(
+        c("AUC_ROC", "AUC_PR", "Brier", "MCC", "Sens", "Espec")))
+    } else {
+      metricas <- metricas %>% select(any_of(c("RMSE", "R2")))
+    }
+    
+    # Para clasificación, ajustar umbral y recalcular métricas dependientes de
+    # de la clasificación.
+    if(datosModelo$clasificacion && !is.null(modeloFinal)) {
+      # Ajustar umbral.
+      probabilidades <- predict(modeloFinal, datosModelo$df, type = "prob")
+      
+      curvaRoc <- pROC::roc(
+        datosModelo$df$respuesta, probabilidades$.pred_REPRUEBA)
+      
+      umbral <- pROC::coords(
+        curvaRoc, "best", best.method = "youden")["threshold"]
+      
+      umbral <- round(as.numeric(umbral), 3)
+      
+      # Obtener predicciones con el umbral ajustado.
+      predicciones <- factor(ifelse(
+        probabilidades$.pred_REPRUEBA >= umbral, "REPRUEBA", "APRUEBA"),
+        levels = c("REPRUEBA", "APRUEBA"))
+      
+      # Recalcular las métricas dependientes de la clasificación.
+      metricas$MCC <- round(
+        yardstick::mcc_vec(
+          truth = datosModelo$df$respuesta, estimate = predicciones), 3)
+      
+      metricas$Sens <- round(
+        yardstick::sens_vec(
+          truth = datosModelo$df$respuesta, estimate = predicciones), 3)
+      
+      metricas$Espec <- round(
+        yardstick::spec_vec(
+          truth = datosModelo$df$respuesta, estimate = predicciones), 3)
+      
+      # Agregar la matriz de confusión.
+      matriz <- yardstick::conf_mat(data.frame(
+        Observado = datosModelo$df$respuesta, Predicho = predicciones),
+        truth = "Observado", estimate = "Predicho")
+      
+      matriz <- as.data.frame(matriz$table)
+      
+      metricas$VP <- matriz$Freq[matriz$Prediction == "REPRUEBA" &
+                                   matriz$Truth == "REPRUEBA"]
+      
+      metricas$FP <- matriz$Freq[matriz$Prediction == "REPRUEBA" &
+                                   matriz$Truth == "APRUEBA"]
+      
+      metricas$FN <- matriz$Freq[matriz$Prediction == "APRUEBA" &
+                                   matriz$Truth == "REPRUEBA"]
+      
+      metricas$VN <- matriz$Freq[matriz$Prediction == "APRUEBA" &
+                                   matriz$Truth == "APRUEBA"]
+    }
+    
     return(metricas)
   }
   
@@ -541,46 +567,57 @@ entrenarModelo <- function(
   
   
   
-  ##############################################################################  
+  ##############################################################################
   # Función principal.
   ##############################################################################
   
+  # Configurar elementos para ajuste del modelo.
+  df <- datosModelo$df
+
+  # Si es para optimización:
+  # - Se rebibe la configuración de hiperparámetros.
+  # - Usar validación cruzada simple.
+  # - Solo se devuelve la métrica para optimización.
+  if(optimizacion) {
+    flujo <- configurarModelo(df, tipoModelo, parametros)
+    set.seed(semilla)
+    
+    cv <- fit_resamples(
+      flujo, resamples = datosModelo$plieguesOptimizacion,
+      control = crearControl(tipoModelo),
+      metrics = crearMetrica(datosModelo$clasificacion, optimizacion))
+    
+    resumen <- extraerResumenMetricas(
+      datosModelo, cv, nombres = nombresMetricas)
+    
+    nombreMetrica <- if(datosModelo$clasificacion) METRICA_CLAS else METRICA_REG
+    return(resumen[[nombreMetrica]])
+  }
+  
+  # Ajustar el modelo definitivo.
   # Ajustar hiperparámetros si no se entregan.
-  if(!tipoModelo %in% c("RLin", "RLog") &&is.null(parametros)) {
+  if(!tipoModelo %in% c("RLin", "RLog") && is.null(parametros)) {
     parametros <- ajustarParametros(datosModelo, tipoModelo, semilla)
   }
-  
-  # Ajustar el modelo con validación cruzada y extraer el resumen de métricas.
-  df <- datosModelo$df
+
+  # Ajustar el modelo con validación cruzada.
   flujo <- configurarModelo(df, tipoModelo, parametros)
-  
   set.seed(semilla)
-  
-  pliegues <- if(optimizacion) {
-    datosModelo$plieguesOptimizacion
-  } else {
-    datosModelo$plieguesFinal
-  }
-  
+
   cv <- fit_resamples(
-    flujo, resamples = pliegues, control = crearControl(tipoModelo),
-    metrics = crearMetrica(datosModelo$clasificacion, completo))
-  
-  predicciones <- extraerPredicciones(cv)
-  metricas <- extraerDetalleMetricas(cv, nombresMetricas)
-  resumen <- extraerResumenMetricas(cv, nombresMetricas)
-  
-  # Si solo se requiere la métrica, extraerla y devolverla.
-  if(!completo) {
-    nombreMetrica <- if(datosModelo$clasificacion) METRICA_CLAS else METRICA_REG
-    return(resumen$media[[nombreMetrica]])
-  }
+    flujo, resamples = datosModelo$plieguesFinal,
+    control = crearControl(tipoModelo),
+    metrics = crearMetrica(datosModelo$clasificacion, optimizacion))
   
   # Ajustar el modelo final.
   set.seed(semilla)
   final <- fit(flujo, data = df)
   
   # Reporte de resultados.
+  predicciones <- extraerPredicciones(cv)
+  metricas <- extraerDetalleMetricas(cv, nombresMetricas)
+  resumen <- extraerResumenMetricas(datosModelo, cv, final, nombresMetricas)
+  
   importancia <- if(startsWith(tipoModelo, "SVM")) {
     receta <- workflows::extract_recipe(final)
     normalizado <- bake(receta, new_data = datosModelo$df)
@@ -589,19 +626,15 @@ entrenarModelo <- function(
   } else {
     calcularImportancia(final, tipoModelo)
   }
-  
+
   # Empaquetar el resultado.
   modelo <- list(
     clasificador = datosModelo$clasificacion, respuesta = datosModelo$respuesta,
     nombre = datosModelo$nombre, tipo = tipoModelo, datos = df,
     predictores = paste(importancia$Variable, collapse = ", "),
-    parametros = parametros, predicciones = predicciones, 
+    parametros = parametros, predicciones = predicciones,
     importancia = importancia, metricas = metricas, resumen = resumen,
     final = final)
-  
-  if(datosModelo$clasificacion) {
-    modelo$matriz <- extraerMatrizConfusion(predicciones)
-  }
-  
+
   return(modelo)
 }

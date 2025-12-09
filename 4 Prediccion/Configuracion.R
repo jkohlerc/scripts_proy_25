@@ -12,8 +12,8 @@ NUCLEOS <-  detectCores() - 2
 
 # Metricas de evaluación.
 NOMBRES_METRICAS <- c(
-    RMSE = "rmse", R2 = "rsq", MCC = "mcc", Sens = "sens", Espec = "spec",
-    AUC_ROC = "roc_auc", AUC_PR = "pr_auc")
+    RMSE = "rmse", R2 = "rsq", AUC_ROC = "roc_auc", AUC_PR = "pr_auc",
+    Brier = "brier_class", MCC = "mcc", Sens = "sens", Espec = "spec")
 
 # Límite de inflación de varianza para regresión lineal y logística.
 MAX_VIF <- 5
@@ -22,12 +22,9 @@ MAX_VIF <- 5
 CV <- list(folds = 5, repeticiones = 10)
 
 # Métricas principales.
-METRICA_CLAS <- "MCC"
+METRICA_CLAS <- "AUC_ROC"
 METRICA_REG <- "RMSE"
-
-RANGO_METRICAS <- list(
-  minClas = if(METRICA_CLAS == "MCC") -1 else 0, maxClas = 1,
-  minReg = 0, maxReg = 6)
+RANGO_METRICAS <- list(minClas = 0, maxClas = 1, minReg = 0, maxReg = 6)
 
 # Random forest.
 NTREE <- list(

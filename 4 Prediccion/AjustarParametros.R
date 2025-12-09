@@ -62,11 +62,24 @@ ajustarParametros <- function(
       }
     }
     
-    # Seleccionar como óptimo la fila con el mayor puntaje (la primera en caso
-    # de empate).
-    optimo <- reporte %>%
-      dplyr::filter(Puntaje == max(Puntaje, na.rm = TRUE)) %>%
-      dplyr::slice(1)
+    # Seleccionar como óptimo la fila con el mayor puntaje y aplicar desempate
+    # de ser necesario.
+    mejorPuntaje <- max(reporte$Puntaje, na.rm = TRUE)
+    candidatas <- reporte %>% filter(Puntaje == mejorPuntaje)
+    
+    if(nrow(candidatas) == 1) {
+      optimo <- candidatas
+    } else {
+      idx <- resolverEmpate(
+        empatados = candidatas,
+        datosModelo = datosModelo,
+        tipoModelo = tipoModelo,
+        semilla = SEMILLA,
+        limites = LIMITES_PARAMETROS
+      )
+      
+      optimo <- candidatas[idx, , drop = FALSE]
+    }
     
     reporte$Seleccionado <- rep("", nrow(reporte))
     reporte$Seleccionado[reporte$Iteracion == optimo$Iteracion[1]] <- "*"
@@ -332,8 +345,8 @@ ajustarParametros <- function(
     
     puntaje <- tryCatch({
       suppressWarnings(entrenarModelo(
-        datosModelo, tipoModelo, parametros, completo = FALSE,
-        optimizacion = TRUE, semilla))
+        datosModelo, tipoModelo, parametros, optimizacion = TRUE,
+        semilla = semilla))
     }, error = function(e) {
       return(NA_real_)
     })
@@ -370,7 +383,7 @@ ajustarParametros <- function(
   }
   
   normalizarMetrica <- function(valor, clasificacion, rangos = RANGO_METRICAS) {
-    # Normaliza la métrica (MCC o RMSE) usando normalización min-max para que
+    # Normaliza la métrica (Brier o RMSE) usando normalización min-max para que
     # quede en una escala de 0 a 1 maximizable.
     # Entrada:
     # - valor: valor obtenido para la métrica.
@@ -413,7 +426,12 @@ ajustarParametros <- function(
       
       if(id %in% colnames(experimentos)) {
         valores <- experimentos[, id]
-        fila$Puntaje <- if(all(is.na(valores))) 1 else min(valores, na.rm = TRUE)
+        
+        fila$Puntaje <- if(all(is.na(valores))) {
+          1
+        } else {
+          min(valores, na.rm = TRUE)
+        }
       } else {
         fila$Puntaje <- 1
       }
@@ -435,36 +453,12 @@ ajustarParametros <- function(
     mejorPuntaje <- min(reporte$Puntaje)
     candidatos <- reporte %>% filter(Puntaje == mejorPuntaje)
     
-    print(candidatos)
-    
     if(nrow(candidatos) == 1) {
       reporte$Seleccionado <- ifelse(reporte$Puntaje == mejorPuntaje, "*", "")
     } else {
-      puntajeDesempate <- sapply(seq_len(nrow(candidatos)), function(i) {
-        fila <- candidatos[i, ]
-        
-        parametros <- as.list(fila %>% select(
-          -c("Configuracion", "Padre", "Puntaje")))
-        
-        if(tipoModelo == "XGB") {
-          parametros$gamma = limites$XGB$gamma
-          parametros$subsample = limites$XGB$subsample
-          parametros$colsample_bytree = limites$XGB$colsample_bytree
-          parametros$nrounds <- ifelse(parametros$eta <= 0.1, 300L, 200L)
-        }
-        
-        modelo <- entrenarModelo(
-          datosModelo, tipoModelo, parametros = parametros, completo = TRUE,
-          optimizacion = TRUE)
-        
-        if(datosModelo$clasificacion) {
-          return(modelo$resumen$media$AUC_PR)
-        } else {
-          return(modelo$resumen$media$R2)
-        }
-      })
+      idMejor <- resolverEmpate(
+        candidatos, datosModelo, tipoModelo, semilla, limites)
       
-      idMejor <- which.max(puntajeDesempate)
       mejor <- candidatos$Configuracion[idMejor]
       reporte$Seleccionado <- ifelse(reporte$Configuracion == mejor, "*", "")
     }
@@ -489,7 +483,8 @@ ajustarParametros <- function(
     
     parametros <- as.list(optimo %>% select(
       -any_of(
-        c("Configuracion", "Padre", "Puntaje", "MCC", "RMSE", "Seleccionado"))))
+        c("Configuracion", "Padre", "Puntaje", "AUC_ROC", "RMSE",
+          "Seleccionado"))))
     
     if(tipoModelo == "XGB") {
       parametros$gamma = limites$XGB$gamma
@@ -499,6 +494,57 @@ ajustarParametros <- function(
     }
     
     return(parametros)
+  }
+  
+  resolverEmpate <- function(
+    empatados, datosModelo, tipoModelo, semilla = SEMILLA,
+    limites = LIMITES_PARAMETROS) {
+    # Escoge la mejor configuración de hiperparámetros en caso de empate para
+    # la métrica principal.
+    # Entrada:
+    # - empatados: dataframe con las configuraciones empatadas en Puntaje.
+    # - datosModelo: descriptor con los datos generales del modelo.
+    # - tipoModelo: string con el tipo de modelo.
+    # - semilla: semilla.
+    # - limites: lista con los límites del espacio de hiperparámetros por tipo
+    #   de modelo.
+    
+    puntajes <- sapply(seq_len(nrow(empatados)), function(i) {
+      fila <- empatados[i, ]
+      
+      # Obtener los parámetros de la fila.
+      parametros <- as.list(
+        fila %>% select(-any_of(c("Configuracion", "Padre", "Puntaje"))))
+      
+      # Obtener parámetros fijos para xgboost.
+      if(tipoModelo == "XGB") {
+        parametros$gamma = limites$XGB$gamma
+        parametros$subsample = limites$XGB$subsample
+        parametros$colsample_bytree = limites$XGB$colsample_bytree
+        parametros$nrounds <- ifelse(parametros$eta <= 0.1, 300L, 200L)
+      }
+      
+      # Ajustar modelos completos para las configuraciones empatadas.
+      modelo <- entrenarModelo(
+        datosModelo, tipoModelo, parametros = parametros,
+        optimizacion = FALSE, semilla = semilla)
+      
+      # Extraer métricas de desempate.
+      if(datosModelo$clasificacion) {
+        return(c(modelo$resumen$AUC_PR, -modelo$resumen$Brier))
+      } else {
+        return(modelo$resumen$R2)
+      }
+    })
+    
+    # Escoger el modelo óptimo.
+    if(datosModelo$clasificacion) {
+      orden <- order(-puntajes[,1], -puntajes[,2])  
+    } else {
+      orden <- order(-puntajes)
+    }
+    
+    return(orden[1])
   }
   
   restaurarMetrica <- function(valor, clasificacion, rangos = RANGO_METRICAS) {
