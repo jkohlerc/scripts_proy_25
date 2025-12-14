@@ -205,11 +205,8 @@ resumirCategoricas <- function(df) {
     frecuencias <- table(columna)
     
     resumen <- data.frame(
-      Variable = nombre,
-      Nivel = names(frecuencias),
-      Frecuencia = as.numeric(frecuencias),
-      stringsAsFactors = FALSE
-    )
+      Variable = nombre, Nivel = names(frecuencias),
+      Frecuencia = as.numeric(frecuencias), stringsAsFactors = FALSE)
     
     resumenes[[nombre]] <- resumen
   }
@@ -262,6 +259,7 @@ reportarDescriptivas <- function(df) {
   # Salida: archivos .csv con los resúmenes y .pdf con los gráficos.
   
   resumirCategoricas(df)
+  tabularVariabilidadCategoricas(df)
   resumirNumericas(df)
   
   gCinfA <- crearGraficoCajas(
@@ -280,6 +278,55 @@ reportarDescriptivas <- function(df) {
   combinarGraficos(
     gCinfA, gCinfO, gPDT, gNotas, "Distribución de variables numéricas",
     "Descriptivas_gral.pdf")
+}
+
+tabularVariabilidadCategoricas <- function(df) {
+  # Calcula la variabilidad de variables categóricas.
+  # Entrada:
+  # -df: dataframe con el conjunto de datos.
+  # Salida: archivo csv con la variabilidad.
+  
+  # Filtrar variables independientes categóricas.
+  df <- df %>% select_if(~class(.) == 'factor')
+  df <- df %>% select(-starts_with("SIT_"))
+  
+  # Determinar nombres de las variables y las dos mayores frecuencias.
+  variabilidad <- data.frame(Variable = colnames(df))
+  variabilidad$Niveles <- sapply(df, function(x) nlevels(x))
+  
+  variabilidad$Frec_1 <- sapply(df, function(x) {
+    sort(table(x), decreasing = TRUE)[1]
+  })
+  
+  variabilidad$Frec_2 <- sapply(df, function(x) {
+    tab <- sort(table(x), decreasing = TRUE)
+    if (length(tab) >= 2) tab[2] else NA
+  })
+  
+  # Determinar la razón entre las dos frecuencias más altas.
+  razonFrecuencias <- as.data.frame(nearZeroVar(df, saveMetrics = TRUE))
+  
+  razonFrecuencias <- razonFrecuencias %>% select(freqRatio) %>%
+    rename(Razon = freqRatio)
+  
+  razonFrecuencias$Variable <- rownames(razonFrecuencias)
+  razonFrecuencias$Razon <- round(razonFrecuencias$Razon, 3)
+  
+  # Construir la tabla.
+  variabilidad <- merge(
+    variabilidad, razonFrecuencias, by = "Variable", all = TRUE)
+  
+  variabilidad <- variabilidad[order(
+    variabilidad$Niveles, -variabilidad$Razon), ]
+  
+  # Determinar el porcentaje de observaciones con el nivel mayoritario.
+  n <- nrow(df)
+  
+  variabilidad$Porcentaje_mayoritario <- round(variabilidad$Frec_1 / n * 100, 1)
+  
+  # Guardar el resultado.
+  archivo <- paste0(RUTA_RESULTADOS, "/Variabilidad categoricas.csv")
+  guardarDataframe(variabilidad, archivo)
 }
 
 
