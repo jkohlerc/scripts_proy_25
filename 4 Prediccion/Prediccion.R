@@ -8,9 +8,9 @@ source("Scripts/0 Comun/Estadisticas.R")
 
 # Cargar paquetes.
 importarPaquetes(
-  c("Boruta", "car", "doParallel", "doRNG", "fastDummies", "ggpubr", "ggrepel",
-    "hardhat", "irace", "kernlab", "patchwork", "pROC", "PRROC", "ranger",
-    "tidymodels", "tidyverse", "xgboost", "zoo"))
+  c("Boruta", "car", "caret", "doParallel", "doRNG", "fastDummies", "ggpubr",
+    "ggrepel", "hardhat", "irace", "kernlab", "patchwork", "pROC", "PRROC",
+    "ranger", "tidymodels", "tidyverse", "xgboost", "zoo"))
 
 # Cargar componentes.
 source("Scripts/4 Prediccion/Configuracion.R")

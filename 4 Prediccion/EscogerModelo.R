@@ -265,33 +265,35 @@ escogerModelo <- function(
     
     # Convertir valores observados a formato 0/1 y calcular la media de las
     # probabilidades obtenidas para cada observación.
-    df <- modelo$predicciones %>%
-      mutate(obs = ifelse(Observado == "REPRUEBA", 1, 0)) %>%
-      group_by(Id) %>%  summarise(obs = first(obs), prob = mean(Prob_REPRUEBA))
+    df <- modelo$predicciones %>% group_by(Id) %>%
+      summarise(
+        Observado = first(Observado), Prob_REPRUEBA = mean(Prob_REPRUEBA),
+        .groups = "drop")
     
-    # Agrupar dataframe por bins.
-    df <- df %>% mutate(
-      bin = cut(
-        prob, breaks = seq(0, 1, length.out = 11), include.lowest = TRUE)) %>%
-      group_by(bin) %>% summarise(
-        mediaProbabilidad = mean(prob), mediaObservado = mean(obs))
+    # Obtener los bins.
+    curva <- calibration(
+      Observado ~ Prob_REPRUEBA, data = df, class = "REPRUEBA", cuts = 10)
+    
+    df <- as.data.frame(curva$data) %>%
+      mutate(Estimado = midpoint / 100, Observado = Percent / 100)
     
     # Definir formato para marcas de los ejes.
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 3))
     
     # Generar gráfico
-    g <- ggplot(df, aes(x = mediaProbabilidad, y = mediaObservado)) +
+    g <- ggplot(df, aes(x = Estimado, y = Observado)) +
       geom_point(size = 3, color = "navy") +
       geom_line(color = "navy", size = 1.2) +
       geom_abline(
         slope = 1, intercept = 0, linetype = "dashed", color = "red") +
       labs(
         title = "Gráfico de calibración", x = "Probabilidad estimada",
-        y = "Frecuencia observada") +
+        y = "Proporción observada") +
       theme_pubr() +
       scale_x_continuous(limits = c(0, 1), labels = formatoEjes) +
       scale_y_continuous(limits = c(0, 1), labels = formatoEjes)
     
+    print(g)
     return(g)
   }
   
@@ -314,14 +316,9 @@ escogerModelo <- function(
     
     # Generar los títulos del gráfico combinado.
     titulo = "Resumen de desempeño del clasificador"
-    texto <- " con variables de ingreso"
-    
-    if(modelo$nombre == "Final") {
-      texto <- paste0(texto, " y competencias informacionales")
-    }
     
     subtitulo = paste0(
-      modelo$respuesta, ": ", modelo$tipo, texto)
+      modelo$respuesta, ": ", modelo$tipo, " modelo ", tolower(modelo$nombre))
     
     # Generar y guardar el gráfico combinado.
     g <- (roc | pr) / (calibracion | importancia) +
@@ -481,13 +478,9 @@ escogerModelo <- function(
     
     # Generar los títulos del gráfico combinado.
     titulo = "Resumen de desempeño del regresor"
-    texto <- " con variables de ingreso"
     
-    if(modelo$nombre == "Final") {
-      texto <- paste0(texto, " y competencias informacionales")
-    }
-    
-    subtitulo = paste0(modelo$respuesta, ": ", modelo$tipo, texto)
+    subtitulo = paste0(
+      modelo$respuesta, ": ", modelo$tipo, " modelo ", tolower(modelo$nombre))
     
     # Generar y guardar el gráfico combinado.
     g <- (predicciones | residuos) / (densidad | importancia) +
