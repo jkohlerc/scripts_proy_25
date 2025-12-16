@@ -267,11 +267,12 @@ escogerModelo <- function(
     # probabilidades obtenidas para cada observación.
     df <- modelo$predicciones %>% group_by(Id) %>%
       summarise(
-        Observado = first(Observado), Prob_REPRUEBA = mean(Prob_REPRUEBA),
+        Observado = first(Observado), 
+        Prob_REPRUEBA = mean(Prob_REPRUEBA),
         .groups = "drop")
     
     # Obtener los bins.
-    curva <- calibration(
+    curva <- caret::calibration(
       Observado ~ Prob_REPRUEBA, data = df, class = "REPRUEBA", cuts = 10)
     
     df <- as.data.frame(curva$data) %>%
@@ -293,7 +294,6 @@ escogerModelo <- function(
       scale_x_continuous(limits = c(0, 1), labels = formatoEjes) +
       scale_y_continuous(limits = c(0, 1), labels = formatoEjes)
     
-    print(g)
     return(g)
   }
   
