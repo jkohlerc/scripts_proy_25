@@ -279,7 +279,7 @@ compararModelos <- function(base, final, datosModelo) {
       mutate(Modelo = dplyr::recode(
         Modelo, "prediccionesBase" = "Base", "prediccionesFinal" = "Final"))
     
-    titulo <- "Estimaciones"
+    titulo <- "Dispersión de estimaciones"
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 1))
     
     g <- ggplot(df, aes(x = observado, y = Predicho, color = Modelo)) +
@@ -288,10 +288,10 @@ compararModelos <- function(base, final, datosModelo) {
                   linetype = "dashed", color = "gray40") +
       scale_color_manual(values = c("Base" = "#F8766D", "Final" = "#00BFC4")) +
       labs(
-        title = titulo, x = "Valor observado", y = "Valor estimado",
+        title = titulo, x = "Observado", y = "Estimado",
         color = "Modelo") + theme_pubr() +
-      scale_x_continuous(labels = formatoEjes) +
-      scale_y_continuous(labels = formatoEjes)
+      scale_x_continuous(limits = c(1, 7), labels = formatoEjes) +
+      scale_y_continuous(limits = c(1, 7), labels = formatoEjes)
     
     return(g)
   }
@@ -339,14 +339,15 @@ compararModelos <- function(base, final, datosModelo) {
         Modelo = "Final",
         Residuo = final$predicciones$Observado - final$predicciones$Predicho))
     
-    titulo <- "Residuos"
+    titulo <- "Distribución de residuos"
     formatoEjes <- function(x) sapply(x, function(v) formatearFlotante(v, 1))
     
     g <- ggplot(df, aes(x = Residuo, fill = Modelo)) +
       geom_density(alpha = 0.5) +
       labs(title = titulo, x = "Residuo", y = "Densidad", fill = "Modelo") +
-      theme_pubr() + scale_x_continuous(labels = formatoEjes) +
-      scale_y_continuous(labels = formatoEjes)
+      theme_pubr() +
+      scale_x_continuous(limits = c(-3, 3), labels = formatoEjes) +
+      scale_y_continuous(limits = c(0, 0.6), labels = formatoEjes)
     
     return(g)
   }

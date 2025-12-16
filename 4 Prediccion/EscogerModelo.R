@@ -288,8 +288,9 @@ escogerModelo <- function(
       labs(
         title = "Gráfico de calibración", x = "Probabilidad estimada",
         y = "Frecuencia observada") +
-      theme_pubr() + scale_x_continuous(labels = formatoEjes) +
-      scale_y_continuous(labels = formatoEjes)
+      theme_pubr() +
+      scale_x_continuous(limits = c(0, 1), labels = formatoEjes) +
+      scale_y_continuous(limits = c(0, 1), labels = formatoEjes)
     
     return(g)
   }
@@ -313,9 +314,14 @@ escogerModelo <- function(
     
     # Generar los títulos del gráfico combinado.
     titulo = "Resumen de desempeño del clasificador"
+    texto <- " con variables de ingreso"
+    
+    if(modelo$nombre == "Final") {
+      texto <- paste0(texto, " y competencias informacionales")
+    }
     
     subtitulo = paste0(
-      modelo$respuesta, ": ", modelo$tipo, " modelo ", tolower(modelo$nombre))
+      modelo$respuesta, ": ", modelo$tipo, texto)
     
     # Generar y guardar el gráfico combinado.
     g <- (roc | pr) / (calibracion | importancia) +
@@ -423,11 +429,12 @@ escogerModelo <- function(
     g <- ggplot(df, aes(x = residual)) +
       geom_density(fill = "navy", color = "black", alpha = 0.6)+
       geom_vline(
-        xintercept = mean(df$residual, na.rm = TRUE), linetype = "dashed",
+        xintercept = median(df$residual, na.rm = TRUE), linetype = "dashed",
         color = "red") +
       labs(title = "Distribución de residuos", x = "Residuo", y = "Densidad") +
-      theme_pubr() + scale_x_continuous(labels = formatoEjes) +
-      scale_y_continuous(labels = formatoEjes)
+      theme_pubr() +
+      scale_x_continuous(limits = c(-3, 3), labels = formatoEjes) +
+      scale_y_continuous(limits = c(0, 0.6), labels = formatoEjes)
     
     return(g)
   }
@@ -448,8 +455,9 @@ escogerModelo <- function(
         slope = 1, intercept = 0, linetype = "dashed", color = "red") +
       labs(
         title = "Dispersión de estimaciones", x = "Observado", y = "Estimado") +
-      theme_pubr() + scale_x_continuous(labels = formatoEjes) +
-      scale_y_continuous(labels = formatoEjes)
+      theme_pubr() +
+      scale_x_continuous(limits = c(1, 7), labels = formatoEjes) +
+      scale_y_continuous(limits = c(1, 7), labels = formatoEjes)
     
     return(g)
   }
@@ -473,9 +481,13 @@ escogerModelo <- function(
     
     # Generar los títulos del gráfico combinado.
     titulo = "Resumen de desempeño del regresor"
+    texto <- " con variables de ingreso"
     
-    subtitulo = paste0(
-      modelo$respuesta, ": ", modelo$tipo, " modelo ", tolower(modelo$nombre))
+    if(modelo$nombre == "Final") {
+      texto <- paste0(texto, " y competencias informacionales")
+    }
+    
+    subtitulo = paste0(modelo$respuesta, ": ", modelo$tipo, texto)
     
     # Generar y guardar el gráfico combinado.
     g <- (predicciones | residuos) / (densidad | importancia) +
@@ -511,8 +523,9 @@ escogerModelo <- function(
       geom_point(color = "navy") +
       geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
       labs(title = "Dispersión de residuos", x = "Estimado", y = "Residuo") +
-      theme_pubr() + scale_x_continuous(labels = formatoEjeX) +
-      scale_y_continuous(labels = formatoEjeY)
+      theme_pubr() +
+      scale_x_continuous(limits = c(1, 7), labels = formatoEjeX) +
+      scale_y_continuous(limits = c(-3, 3), labels = formatoEjeY)
     
     return(g)
   }

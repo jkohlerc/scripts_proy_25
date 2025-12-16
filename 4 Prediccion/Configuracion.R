@@ -46,4 +46,4 @@ LOG_IRACE <- "iraceLog.rda"
 TIPOS_MODELO <- c("RL", "RF", "SVM_L", "SVM_R", "XGB")
 
 # Nombres para variables de respuesta.
-CURSOS <- c("ALG", "CAL", "FIS", "PPA")
+CURSOS <- c("CAL", "FIS", "PPA", "ALG")

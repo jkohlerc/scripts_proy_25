@@ -389,7 +389,7 @@ graficarCategorica <- function(df, variable, prueba) {
       proporcion = count / sum(count),
       etiqueta = paste0(
         count, " (",
-        formatearFlotante(proporcion * 100), "%)"))
+        formatearFlotante(proporcion * 100, 1), "%)"))
   
   # Crear el gráfico.
   g <- ggbarplot(proporciones,  x = "cluster", y = "proporcion",
